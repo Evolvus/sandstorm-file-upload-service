@@ -1,0 +1,241 @@
+package com.evolvus.sandstorm;
+
+import java.io.File;
+import java.text.MessageFormat;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.evolvus.sandstorm.csv.bean.FileUpload;
+import com.evolvus.sandstorm.csv.bean.Response;
+
+/**
+ * 
+ * @author EVOLVUS\shrimank
+ *
+ */
+@RestController
+@RequestMapping("/api/v0.1")
+public class FileUploadController {
+
+	@Value("${file.extension.property}")
+	private String fileExtension;
+
+	@Value("${file.size.property}")
+	private String fileSizeInMB;
+
+	@Value("${file.path.property}")
+	private String filePath;
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(FileUploadController.class);
+
+	@Value("${platform.server}")
+	private String platformServer;
+
+	// @Value("${platform.fileupload.post.url}")
+	// private String fileUploadPostUrl;
+
+	@Autowired
+	private RestTemplate restTemplate;
+
+	@RequestMapping(value = "upload", method = RequestMethod.POST)
+	public ResponseEntity<Response> upload(final @RequestParam("file") MultipartFile file,
+			final @RequestParam("lookupCode") String lookupCode, final @RequestParam("value") String value,
+			final HttpServletRequest request) {
+		if (LOGGER.isDebugEnabled()) {
+			LOGGER.debug("Start :{}", file.getName());
+		}
+
+		Response response = new Response(Constants._200);
+		File uploadedFile = null;
+		HttpHeaders headers = new HttpHeaders();
+
+		HttpEntity<HttpHeaders> entity = new HttpEntity<HttpHeaders>(setHeaders(request, headers));
+		try {
+
+			Map<String, Object> lookupMap = this.getLookupMap(lookupCode, value, entity);
+
+			this.validateFileExtension(file, lookupMap);
+
+			uploadedFile = new File(lookupMap.get(filePath).toString());
+			file.transferTo(uploadedFile);
+
+			this.vaidateFileSize(uploadedFile, lookupMap);
+			response.setDescription("File uploaded successfully.");
+
+		} catch (InvalidFileException e) {
+			response.setDescription(e.getMessage());
+			response.setStatus("400");
+			if (uploadedFile != null)
+				uploadedFile.delete();
+			if (LOGGER.isErrorEnabled()) {
+				LOGGER.error("InvalidFileException while uploading file :{}", e);
+			}
+		} catch (Exception e) {
+			response.setDescription(e.getMessage());
+			response.setStatus("500");
+			if (uploadedFile != null)
+				uploadedFile.delete();
+
+			if (LOGGER.isErrorEnabled()) {
+				LOGGER.error("Error while uploading file :{}", e);
+			}
+
+		} finally {
+			// Store the record in fileUpload Collection
+			if (response.getStatus().equalsIgnoreCase(Constants._200)) {
+				this.insertFileRecord(file, value, request, response);
+			}
+		}
+		return new ResponseEntity<Response>(response, HttpStatus.OK);
+	}
+
+	/**
+	 * 
+	 * @param file
+	 * @param value
+	 * @param request
+	 * @param response
+	 */
+	private void insertFileRecord(final MultipartFile file, final String value, final HttpServletRequest request,
+			Response response) {
+		FileUpload fileUpload = new FileUpload();
+		fileUpload.setFileName(file.getOriginalFilename());
+		fileUpload.setEnablFlag(Constants.TRUE);
+		fileUpload.setFileIdentification(value);
+		fileUpload.setFileUploadStatus(Constants.INITIALIZED);
+		fileUpload.setTenantId(request.getHeader(Constants.TENANT_ID));
+		fileUpload.setCreatdDate(new Date());
+		fileUpload.setLastUpdatedDate(new Date());
+		fileUpload.setCreatedBy(request.getHeader(Constants.USER));
+		LOGGER.info("FileUpload before saving/posting object is :{}", fileUpload);
+		try {
+			Response fileUploadResponse = restTemplate
+					.postForObject(String.format("%s/api/fileUpload/", platformServer), fileUpload, Response.class);
+			LOGGER.debug("FileUpload saved response status :{}", fileUploadResponse);
+		} catch (Exception rce) {
+			if (LOGGER.isErrorEnabled()) {
+				LOGGER.error("Error while inserting fileUpload object :{}", rce);
+			}
+			response.setDescription(rce.getMessage());
+			response.setStatus("500");
+		}
+	}
+
+	/**
+	 * 
+	 * @param lookupCode
+	 * @param value
+	 * @param entity
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> getLookupMap(final String lookupCode, final String value,
+			HttpEntity<HttpHeaders> entity) {
+		ResponseEntity<Response> resp = restTemplate.exchange(
+				MessageFormat.format("%s/api/lookup?lookupCode=%s&value=%s", platformServer, lookupCode, value),
+				HttpMethod.GET, entity, Response.class);
+		return (HashMap<String, Object>) resp.getBody().getData();
+	}
+
+	/**
+	 * 
+	 * @param request
+	 * @param headers
+	 * @return
+	 */
+	private HttpHeaders setHeaders(final HttpServletRequest request, HttpHeaders headers) {
+		headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+		headers.set(Constants.TENANT_ID, request.getHeader(Constants.TENANT_ID));
+		headers.set(Constants.ACCESS_LEVEL, request.getHeader(Constants.ACCESS_LEVEL));
+		headers.set(Constants.ENTITY_ID, request.getHeader(Constants.ENTITY_ID));
+		headers.set(Constants.USER, request.getHeader(Constants.USER));
+		headers.set(Constants.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+		return headers;
+	}
+
+	/**
+	 * 
+	 * @param uploadedFile
+	 * @param lookupMap
+	 * @throws InvalidFileException
+	 */
+	private void vaidateFileSize(File uploadedFile, Map<String, Object> lookupMap) throws InvalidFileException {
+		boolean isFileSizeExceeded = this.validateFileSize(uploadedFile,
+				Integer.valueOf(lookupMap.get(fileSizeInMB).toString()));
+
+		if (!isFileSizeExceeded) {
+			throw new InvalidFileException(
+					String.format("File Size cannot exceed %sMB", lookupMap.get(fileSizeInMB).toString()));
+		}
+	}
+
+	/**
+	 * 
+	 * @param file
+	 * @param lookupMap
+	 * @throws InvalidFileException
+	 */
+	private void validateFileExtension(final MultipartFile file, Map<String, Object> lookupMap)
+			throws InvalidFileException {
+		// valueTwo to check extension
+		boolean isExtensionValid = this.validateExtension(file.getOriginalFilename(),
+				lookupMap.get(fileExtension).toString());
+		if (!isExtensionValid) {
+			throw new InvalidFileException(
+					String.format("File Extension %s not supported", lookupMap.get(fileExtension).toString()));
+		}
+	}
+
+	/**
+	 * 
+	 * @param file
+	 * @param maxSizeInMB
+	 * @return
+	 */
+	private boolean validateFileSize(File file, Integer maxSizeInMB) {
+		return this.getFileSizeMegaBytes(file) > maxSizeInMB;
+
+	}
+
+	/**
+	 * 
+	 * @param fileName
+	 * @param extension
+	 * @return
+	 */
+	private boolean validateExtension(String fileName, String extension) {
+		return fileName.substring(fileName.lastIndexOf(Constants.DOT)).equalsIgnoreCase(extension);
+
+	}
+
+	/**
+	 * 
+	 * @param file
+	 * @return
+	 */
+	private double getFileSizeMegaBytes(File file) {
+		return (double) file.length() / (1024 * 1024);
+	}
+
+}
