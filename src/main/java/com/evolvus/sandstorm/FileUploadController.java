@@ -80,7 +80,7 @@ public class FileUploadController {
 			uploadedFile = new File(lookupMap.get(filePath).toString());
 			file.transferTo(uploadedFile);
 
-			this.vaidateFileSize(uploadedFile, lookupMap);
+			this.validateFileSize(uploadedFile, lookupMap);
 			response.setDescription("File uploaded successfully.");
 
 		} catch (InvalidFileException e) {
@@ -180,7 +180,7 @@ public class FileUploadController {
 	 * @param lookupMap
 	 * @throws InvalidFileException
 	 */
-	private void vaidateFileSize(File uploadedFile, Map<String, Object> lookupMap) throws InvalidFileException {
+	private void validateFileSize(File uploadedFile, Map<String, Object> lookupMap) throws InvalidFileException {
 		boolean isFileSizeExceeded = this.validateFileSize(uploadedFile,
 				Integer.valueOf(lookupMap.get(fileSizeInMB).toString()));
 
