@@ -5,7 +5,6 @@ package com.evolvus.sandstorm.camel.route;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,7 +28,6 @@ import com.evolvus.sandstorm.FileStatus;
 import com.evolvus.sandstorm.InvalidFileException;
 import com.evolvus.sandstorm.csv.bean.Response;
 import com.evolvus.sandstorm.csv.bean.UserBean;
-import com.sun.xml.bind.v2.runtime.reflect.opt.Const;
 
 /**
  * @author EVOLVUS\shrimank
@@ -154,10 +152,8 @@ public class UserUploadProcessor implements Processor {
 	private ResponseEntity<Response> updateFileUpload(Exchange exchange, HttpHeaders httpHeader,
 			Map<String, Object> fileUploadMap) {
 		HttpEntity requestFileUpload = new HttpEntity(fileUploadMap, httpHeader);
-		ResponseEntity<Response> responseFileUploadUpdate = restTemplate.postForEntity(String
-				.format("%s/api/fileupload/fileName=%s", platformServer, exchange.getIn().getHeader(CAMEL_FILE_NAME)),
-				requestFileUpload, Response.class);
-		return responseFileUploadUpdate;
+		return restTemplate.postForEntity(String.format("%s/api/fileupload/fileName=%s", platformServer,
+				exchange.getIn().getHeader(CAMEL_FILE_NAME)), requestFileUpload, Response.class);
 	}
 
 }

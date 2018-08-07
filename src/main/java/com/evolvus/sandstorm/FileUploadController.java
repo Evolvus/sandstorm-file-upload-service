@@ -66,14 +66,14 @@ public class FileUploadController {
 			LOGGER.debug("Start :{}", file.getName());
 		}
 
-		Response response = new Response(Constants._200);
+		Response response = new Response(Constants.OK_STATUS);
 		File uploadedFile = null;
-		HttpHeaders headers = new HttpHeaders();
+		HttpHeaders headers = setHeaders(request);
 
-		HttpEntity<HttpHeaders> entity = new HttpEntity<HttpHeaders>(setHeaders(request, headers));
+		HttpEntity<HttpHeaders> requestEntity = new HttpEntity<HttpHeaders>(headers);
 		try {
-
-			Map<String, Object> lookupMap = this.getLookupMap(lookupCode, value, entity);
+			
+			Map<String, Object> lookupMap = this.getLookupMap(lookupCode, value, requestEntity);
 
 			this.validateFileExtension(file, lookupMap);
 
@@ -103,7 +103,7 @@ public class FileUploadController {
 
 		} finally {
 			// Store the record in fileUpload Collection
-			if (response.getStatus().equalsIgnoreCase(Constants._200)) {
+			if (response.getStatus().equalsIgnoreCase(Constants.OK_STATUS)) {
 				this.insertFileRecord(file, value, request, response);
 			}
 		}
@@ -151,10 +151,10 @@ public class FileUploadController {
 	 */
 	@SuppressWarnings("unchecked")
 	private Map<String, Object> getLookupMap(final String lookupCode, final String value,
-			HttpEntity<HttpHeaders> entity) {
+			HttpEntity<HttpHeaders> requestEntity) {
 		ResponseEntity<Response> resp = restTemplate.exchange(
-				MessageFormat.format("%s/api/lookup?lookupCode=%s&value=%s", platformServer, lookupCode, value),
-				HttpMethod.GET, entity, Response.class);
+				String.format("%s/api/lookup?lookupCode=%s&value=%s", platformServer, lookupCode, value),
+				HttpMethod.GET, requestEntity, Response.class);
 		return (HashMap<String, Object>) resp.getBody().getData();
 	}
 
@@ -164,8 +164,10 @@ public class FileUploadController {
 	 * @param headers
 	 * @return
 	 */
-	private HttpHeaders setHeaders(final HttpServletRequest request, HttpHeaders headers) {
+	private HttpHeaders setHeaders(final HttpServletRequest request) {
+		HttpHeaders headers = new HttpHeaders();
 		headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+		headers.set(Constants.CONTENT_TYPE, Constants.APPLICATION_JSON);
 		headers.set(Constants.TENANT_ID, request.getHeader(Constants.TENANT_ID));
 		headers.set(Constants.ACCESS_LEVEL, request.getHeader(Constants.ACCESS_LEVEL));
 		headers.set(Constants.ENTITY_ID, request.getHeader(Constants.ENTITY_ID));

@@ -10,6 +10,8 @@ public class Response {
 	private String description;
 
 	private Object data;
+	
+	public Response() {}
 
 	public Response(String status) {
 		this.status = status;

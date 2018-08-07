@@ -1,8 +1,17 @@
 package com.evolvus.sandstorm;
-
+/**
+ * 
+ * @author EVOLVUS\shrimank
+ *
+ */
 public final class Constants {
 
+	private Constants() {
+	}
+
 	public static final String CONTENT_TYPE = "Content-Type";
+	
+	public static final String APPLICATION_JSON = "application/json";
 
 	public static final String ENTITY_ID = "X-ENTITY-ID";
 
@@ -14,7 +23,7 @@ public final class Constants {
 
 	public static final String USER = "X-USER";
 
-	public static final String _200 = "200";
+	public static final String OK_STATUS = "200";
 
 	public static final String INITIALIZED = "INITIALIZED";
 
