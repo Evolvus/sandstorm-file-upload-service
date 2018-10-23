@@ -32,6 +32,7 @@ import com.evolvus.sandstorm.csv.bean.Response;
 /**
  * 
  * @author EVOLVUS\shrimank
+ * @Modified EVOLVUS\mahendrar
  *
  */
 @RestController
@@ -70,17 +71,16 @@ public class FileUploadController {
 		File uploadedFile = null;
 		HttpHeaders headers = setHeaders(request);
 
-		HttpEntity<HttpHeaders> requestEntity = new HttpEntity<HttpHeaders>(headers);
+		HttpEntity<?> requestEntity = new HttpEntity<>(headers);
 		try {
 			
 			Map<String, Object> lookupMap = this.getLookupMap(lookupCode, value, requestEntity);
 
 			this.validateFileExtension(file, lookupMap);
-
-			uploadedFile = new File(lookupMap.get(filePath).toString());
-			file.transferTo(uploadedFile);
-
-			this.validateFileSize(uploadedFile, lookupMap);
+			//uploadedFile = new File(lookupMap.get(filePath).toString());
+			//file.transferTo(uploadedFile);
+			//this.validateFileSize(uploadedFile, lookupMap);
+                        uploadedFile = saveUploadedFileToPath(file, lookupMap.get(filePath).toString());
 			response.setDescription("File uploaded successfully.");
 
 		} catch (InvalidFileException e) {
@@ -150,12 +150,16 @@ public class FileUploadController {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	private Map<String, Object> getLookupMap(final String lookupCode, final String value,
-			HttpEntity<HttpHeaders> requestEntity) {
-		ResponseEntity<Response> resp = restTemplate.exchange(
-				String.format("%s/api/lookup?lookupCode=%s&value=%s", platformServer, lookupCode, value),
-				HttpMethod.GET, requestEntity, Response.class);
-		return (HashMap<String, Object>) resp.getBody().getData();
+	private Map<String, Object> getLookupMap(final String lookupCode, final String value, HttpEntity<HttpHeaders> requestEntity) {
+		
+                Map<String, Object> tmpMap;
+                final String url = platformServer+"/api/lookup?lookupCode="+lookupCode+"&value="+value;
+                ResponseEntity<Response> resp = restTemplate.exchange(url, HttpMethod.GET, requestEntity, Response.class);
+
+		ArrayList<HashMap<String, Object>> obj = (ArrayList<HashMap<String, Object>>) resp.getBody().getData();
+		tmpMap = obj.get(0);
+
+		return tmpMap;
 	}
 
 	/**
@@ -227,7 +231,8 @@ public class FileUploadController {
 	 * @return
 	 */
 	private boolean validateExtension(String fileName, String extension) {
-		return fileName.substring(fileName.lastIndexOf(Constants.DOT)).equalsIgnoreCase(extension);
+		//return fileName.substring(fileName.lastIndexOf(Constants.DOT)).equalsIgnoreCase(extension);
+                return fileName.contains(extension);
 
 	}
 
@@ -238,6 +243,46 @@ public class FileUploadController {
 	 */
 	private double getFileSizeMegaBytes(File file) {
 		return (double) file.length() / (1024 * 1024);
+	}
+
+        /**
+	 *
+	 * @param multipartfile
+	 * @param targetFolderPath
+	 * @return sourceFile
+	 */
+
+	private File saveUploadedFileToPath(MultipartFile multipartfile, String targetFolderPath) {
+		File sourceFile = null;
+		try {
+			String fileName = multipartfile.getOriginalFilename();
+			LOGGER.debug("FileName uploaded {}", fileName);
+
+			File sourceDirectory = new File(targetFolderPath);
+			if (!sourceDirectory.exists()) {
+				sourceDirectory.mkdirs();
+			}
+			sourceFile = new File(sourceDirectory + File.separator + fileName);
+			File tmpDirectory = new File(File.separator + "tmp" + File.separator + sourceDirectory);
+			if (!tmpDirectory.exists()) {
+				tmpDirectory.mkdirs();
+			}
+			File tmpFile = new File(
+					File.separator + "tmp" + File.separator + sourceDirectory + File.separator + fileName);
+			boolean isCreated = tmpFile.createNewFile();
+			if (isCreated) {
+				multipartfile.transferTo(sourceFile);
+			} else {
+				throw new FileNotFoundException(
+						"Unable to Create File " + fileName + " in directory " + sourceDirectory);
+			}
+			tmpFile.renameTo(sourceFile);
+		} catch (Exception e) {
+			if (LOGGER.isErrorEnabled()) {
+				LOGGER.error("Exception in saveUploadedFile To Path: {} ", e);
+			}
+		}
+		return sourceFile;
 	}
 
 }

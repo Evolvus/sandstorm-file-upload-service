@@ -25,6 +25,7 @@ import org.springframework.web.client.RestTemplate;
 @SpringBootApplication
 @EnableMongoRepositories(basePackages = "com.evolvus.sandstorm.repositories")
 @EnableAutoConfiguration
+@PropertySource(ignoreResourceNotFound = false, value = { "file:${spring.config.location}/application.properties", "classpath:/application.properties" })
 public class SandstormFileUploadServiceApplication {
 
 	// https://github.com/Evolvus/evolvus-sandstorm-ng-ui/blob/master/src/app/components/user-management/user-data.service.ts
