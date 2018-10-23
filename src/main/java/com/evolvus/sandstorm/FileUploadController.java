@@ -74,7 +74,7 @@ public class FileUploadController {
 		File uploadedFile = null;
 		HttpHeaders headers = setHeaders(request);
 
-		HttpEntity<?> entity = new HttpEntity(headers);
+		HttpEntity<?> requestEntity = new HttpEntity(headers);
 		try {
 			
 			Map<String, Object> lookupMap = this.getLookupMap(lookupCode, value, requestEntity);
