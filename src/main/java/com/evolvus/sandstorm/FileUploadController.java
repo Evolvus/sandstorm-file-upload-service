@@ -74,7 +74,7 @@ public class FileUploadController {
 		File uploadedFile = null;
 		HttpHeaders headers = setHeaders(request);
 
-		HttpEntity<?> requestEntity = new HttpEntity(headers);
+		HttpEntity<?> requestEntity = new HttpEntity<>(headers);
 		try {
 			
 			Map<String, Object> lookupMap = this.getLookupMap(lookupCode, value, requestEntity);
@@ -153,7 +153,7 @@ public class FileUploadController {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	private Map<String, Object> getLookupMap(final String lookupCode, final String value, HttpEntity<HttpHeaders> requestEntity) {
+	private Map<String, Object> getLookupMap(final String lookupCode, final String value, HttpEntity<?> requestEntity) {
 		
                 Map<String, Object> tmpMap;
                 final String url = platformServer+"/api/lookup?lookupCode="+lookupCode+"&value="+value;
