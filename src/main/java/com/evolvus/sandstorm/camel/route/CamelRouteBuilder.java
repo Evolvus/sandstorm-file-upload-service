@@ -28,8 +28,8 @@ public class CamelRouteBuilder extends RouteBuilder {
 	public void configure() throws Exception {
 
 		DataFormat bindy = new BindyCsvDataFormat(com.evolvus.sandstorm.csv.bean.UserBean.class);
-		from(String.format("file://%s/UPLOAD/USER", sandStormHome)).unmarshal(bindy).routeId("USER_UPLOAD_ROUTE")
-				.process(userProcessor).to(String.format("file://%s/UPLOAD/USER/UPLOADED", sandStormHome));
+		from("file://"+sandStormHome+"/UPLOAD/USER" ).unmarshal(bindy).routeId("USER_UPLOAD_ROUTE")
+				.process(userProcessor);
 
 	}
 

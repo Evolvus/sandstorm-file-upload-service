@@ -5,7 +5,7 @@ import org.apache.camel.dataformat.bindy.annotation.DataField;
 
 import lombok.Data;
 
-@CsvRecord(separator = ",", skipFirstLine = true)
+@CsvRecord(separator = ",", skipFirstLine = false)
 @Data
 public class UserBean {
 

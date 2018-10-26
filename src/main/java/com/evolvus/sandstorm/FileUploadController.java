@@ -131,6 +131,12 @@ public class FileUploadController {
 		fileUpload.setCreatdDate(new Date());
 		fileUpload.setLastUpdatedDate(new Date());
 		fileUpload.setCreatedBy(request.getHeader(Constants.USER));
+		fileUpload.setFileType(value);
+		fileUpload.setTotalTransaction("");
+		fileUpload.setCount("");
+		fileUpload.setUploadedBy(request.getHeader(Constants.USER));
+		fileUpload.setErrorLog("");
+		fileUpload.setSuccessLog("");
 		LOGGER.info("FileUpload before saving/posting object is :{}", fileUpload);
 		try {
 			Response fileUploadResponse = restTemplate

@@ -5,6 +5,7 @@ package com.evolvus.sandstorm.camel.route;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,6 +22,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.client.RestTemplate;
 
 import com.evolvus.sandstorm.Constants;
@@ -68,6 +70,7 @@ public class UserUploadProcessor implements Processor {
 
 		HttpHeaders httpHeader = new HttpHeaders();
 		httpHeader.setContentType(MediaType.APPLICATION_JSON);
+		httpHeader.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 
 		List<String> createdUserList = new ArrayList();
 
@@ -77,13 +80,15 @@ public class UserUploadProcessor implements Processor {
 							exchange.getIn().getHeader(CAMEL_FILE_NAME)), Response.class);
 
 			if (responseFileUpload.hasBody()) {
-				Map<String, Object> fileUploadMap = (Map<String, Object>) responseFileUpload.getBody().getData();
+				//Map<String, Object> fileUploadMap = (Map<String, Object>) responseFileUpload.getBody().getData();
+				ArrayList<HashMap<String, Object>> obj = (ArrayList<HashMap<String, Object>>) responseFileUpload.getBody().getData();
+				Map<String, Object> fileUploadMap = obj.get(0);
 				httpHeader.set(Constants.TENANT_ID, fileUploadMap.get("tenantId").toString());
 				httpHeader.set(Constants.ENTITY_ID, fileUploadMap.get("entityId").toString());
 				httpHeader.set(Constants.ACCESS_LEVEL, fileUploadMap.get("accessLevel").toString());
 				httpHeader.set(Constants.USER, fileUploadMap.get("createdBy").toString());
 
-				List<UserBean> userBeanList = (List<UserBean>) exchange.getIn().getBody();
+				List<UserBean> userBeanList = (List<UserBean>) exchange.getIn().getBody(List.class);
 				Integer totalTransaction = userBeanList.size();
 				Integer totalProcessCount = 0;
 				Integer totalFailedCount = 0;
@@ -113,9 +118,8 @@ public class UserUploadProcessor implements Processor {
 						fileUploadMap.put(TOTAL_FAILED_COUNT, totalFailedCount);
 						fileUploadMap.put(TOTAL_TRANSACTION, totalTransaction);
 						fileUploadMap.put(PROCESSING_STATUS, FileStatus.IN_PROGRESS);
-						ResponseEntity<Response> responseFileUploadUpdate = updateFileUpload(exchange, httpHeader,
-								fileUploadMap);
-						LOGGER.info("Updated FileRecord :{}", responseFileUploadUpdate);
+						//ResponseEntity<Response> responseFileUploadUpdate = updateFileUpload(exchange, httpHeader,	fileUploadMap);
+						//LOGGER.info("Updated FileRecord :{}", responseFileUploadUpdate);
 
 					}
 				}
@@ -126,9 +130,8 @@ public class UserUploadProcessor implements Processor {
 					fileUploadMap.put(PROCESSING_STATUS, FileStatus.COMPLETED);
 
 				}
-				ResponseEntity<Response> responseFileUploadUpdate = updateFileUpload(exchange, httpHeader,
-						fileUploadMap);
-				LOGGER.info("Updated FileRecord :{}", responseFileUploadUpdate);
+				//ResponseEntity<Response> responseFileUploadUpdate = updateFileUpload(exchange, httpHeader,	fileUploadMap);
+				//LOGGER.info("Updated FileRecord :{}", responseFileUploadUpdate);
 
 			} else {
 				throw new InvalidFileException("File not available in FileUpload collection");
@@ -151,9 +154,18 @@ public class UserUploadProcessor implements Processor {
 
 	private ResponseEntity<Response> updateFileUpload(Exchange exchange, HttpHeaders httpHeader,
 			Map<String, Object> fileUploadMap) {
-		HttpEntity requestFileUpload = new HttpEntity(fileUploadMap, httpHeader);
-		return restTemplate.postForEntity(String.format("%s/api/fileupload/fileName=%s", platformServer,
-				exchange.getIn().getHeader(CAMEL_FILE_NAME)), requestFileUpload, Response.class);
+		HttpEntity<Map<String, Object>> requestFileUpload = new HttpEntity(fileUploadMap, httpHeader);
+		
+		
+		final String url = platformServer+"/api/fileUpload/fileName=";
+
+		ResponseEntity<Response> tmpResponse = restTemplate.postForEntity(url, requestFileUpload.toString().replace("<", "").replace(">", ""), Response.class);
+	
+		
+		//ResponseEntity<Response> tmpResponse = restTemplate.postForEntity(String.format("%s/api/fileUpload/fileName=%s", platformServer,
+				//exchange.getIn().getHeader(CAMEL_FILE_NAME)), requestFileUpload, Response.class);
+		
+		return tmpResponse;
 	}
 
 }
