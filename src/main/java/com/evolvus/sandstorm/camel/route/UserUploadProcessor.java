@@ -11,6 +11,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
+
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.slf4j.Logger;
@@ -19,6 +21,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMessage;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -30,6 +34,7 @@ import com.evolvus.sandstorm.FileStatus;
 import com.evolvus.sandstorm.InvalidFileException;
 import com.evolvus.sandstorm.csv.bean.Response;
 import com.evolvus.sandstorm.csv.bean.UserBean;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * @author EVOLVUS\shrimank
@@ -48,7 +53,7 @@ public class UserUploadProcessor implements Processor {
 	private static final String PROCESSING_STATUS = "processingStatus";
 
 	private static final String CAMEL_FILE_NAME = "CamelFileName";
-
+	private static final String ERROR_LOG = "errorLog";
 	private static final Logger LOGGER = LoggerFactory.getLogger(UserUploadProcessor.class);
 
 	@Autowired
@@ -67,31 +72,46 @@ public class UserUploadProcessor implements Processor {
 		if (LOGGER.isDebugEnabled()) {
 			LOGGER.debug("Start :{}", exchange.getIn().getBody());
 		}
-
 		HttpHeaders httpHeader = new HttpHeaders();
 		httpHeader.setContentType(MediaType.APPLICATION_JSON);
 		httpHeader.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+		String fileName = null;
+		if(exchange.getIn().getHeader(CAMEL_FILE_NAME) != null) {
+		 fileName=(String) exchange.getIn().getHeader(CAMEL_FILE_NAME);
+		}
+		
+String tenantId = fileName.substring( fileName.lastIndexOf("_")+1 , fileName.lastIndexOf("."));
+
+httpHeader.set("X-TENANT-ID", tenantId);
+final HttpEntity<String> entity = new HttpEntity<String>(httpHeader);
 
 		List<String> createdUserList = new ArrayList();
 
 		try {
-			ResponseEntity<Response> responseFileUpload = restTemplate
-					.getForEntity(String.format("%s/api/fileUpload?fileName=%s", platformServer,
-							exchange.getIn().getHeader(CAMEL_FILE_NAME)), Response.class);
-
+			
+			 final String url = platformServer+"/api/fileUpload?fileName="+exchange.getIn().getHeader(CAMEL_FILE_NAME);
+             ResponseEntity<Response> responseFileUpload = restTemplate.exchange(url, HttpMethod.GET, entity, Response.class);
+			
+//			ResponseEntity<Response> responseFileUpload = restTemplate
+//					.getForEntity(String.format("%s/api/fileUpload?fileName=%s", platformServer,
+//							exchange.getIn().getHeader(CAMEL_FILE_NAME)), Response.class);
+			
 			if (responseFileUpload.hasBody()) {
 				//Map<String, Object> fileUploadMap = (Map<String, Object>) responseFileUpload.getBody().getData();
 				ArrayList<HashMap<String, Object>> obj = (ArrayList<HashMap<String, Object>>) responseFileUpload.getBody().getData();
 				Map<String, Object> fileUploadMap = obj.get(0);
+				 fileName=fileUploadMap.get("fileName").toString();
 				httpHeader.set(Constants.TENANT_ID, fileUploadMap.get("tenantId").toString());
 				httpHeader.set(Constants.ENTITY_ID, fileUploadMap.get("entityId").toString());
 				httpHeader.set(Constants.ACCESS_LEVEL, fileUploadMap.get("accessLevel").toString());
 				httpHeader.set(Constants.USER, fileUploadMap.get("createdBy").toString());
 
 				List<UserBean> userBeanList = (List<UserBean>) exchange.getIn().getBody(List.class);
+				List<Object> failedUsers= new ArrayList();
 				Integer totalTransaction = userBeanList.size();
 				Integer totalProcessCount = 0;
 				Integer totalFailedCount = 0;
+	
 				for (UserBean userBean : userBeanList) {
 
 					try {
@@ -104,7 +124,16 @@ public class UserUploadProcessor implements Processor {
 							createdUserList.add(MessageFormat.format("{0},{1}", userBean.toString(),
 									String.format("User Id [%s],tenant :[%s] created _id:%s", user.get("userId"),
 											user.get("tenantId"), user.get("_id"))));
-							totalProcessCount++;
+							if(resp.getStatus().equals("400")) {
+								String errorLog="";
+								totalFailedCount++;
+
+								errorLog=errorLog+" line: "+totalProcessCount.toString();
+								errorLog=errorLog+" message: "+resp.getDescription();
+								failedUsers.add(errorLog);
+							}
+								totalProcessCount++;
+							
 						}
 					} catch (Exception excep) {
 						totalFailedCount++;
@@ -118,20 +147,23 @@ public class UserUploadProcessor implements Processor {
 						fileUploadMap.put(TOTAL_FAILED_COUNT, totalFailedCount);
 						fileUploadMap.put(TOTAL_TRANSACTION, totalTransaction);
 						fileUploadMap.put(PROCESSING_STATUS, FileStatus.IN_PROGRESS);
-						//ResponseEntity<Response> responseFileUploadUpdate = updateFileUpload(exchange, httpHeader,	fileUploadMap);
-						//LOGGER.info("Updated FileRecord :{}", responseFileUploadUpdate);
+						
+//						ResponseEntity<Response> responseFileUploadUpdate = updateFileUpload(exchange, httpHeader,	fileUploadMap);
+//						LOGGER.info("Updated FileRecord :{}", responseFileUploadUpdate);
 
 					}
 				}
 
 				if (totalFailedCount > 0) {
 					fileUploadMap.put(PROCESSING_STATUS, FileStatus.ERROR);
+					fileUploadMap.put(ERROR_LOG,failedUsers );
+
 				} else {
 					fileUploadMap.put(PROCESSING_STATUS, FileStatus.COMPLETED);
 
 				}
-				//ResponseEntity<Response> responseFileUploadUpdate = updateFileUpload(exchange, httpHeader,	fileUploadMap);
-				//LOGGER.info("Updated FileRecord :{}", responseFileUploadUpdate);
+				ResponseEntity<Response> responseFileUploadUpdate = updateFileUpload(exchange, httpHeader,	fileUploadMap, fileName);
+				LOGGER.info("Updated FileRecord :{}", responseFileUploadUpdate);
 
 			} else {
 				throw new InvalidFileException("File not available in FileUpload collection");
@@ -153,13 +185,13 @@ public class UserUploadProcessor implements Processor {
 	}
 
 	private ResponseEntity<Response> updateFileUpload(Exchange exchange, HttpHeaders httpHeader,
-			Map<String, Object> fileUploadMap) {
+			Map<String, Object> fileUploadMap, String fileName) {
 		HttpEntity<Map<String, Object>> requestFileUpload = new HttpEntity(fileUploadMap, httpHeader);
 		
 		
-		final String url = platformServer+"/api/fileUpload/fileName=";
-
-		ResponseEntity<Response> tmpResponse = restTemplate.postForEntity(url, requestFileUpload.toString().replace("<", "").replace(">", ""), Response.class);
+		final String url = platformServer+"/api/fileUpload/"+fileName;
+		
+		ResponseEntity<Response> tmpResponse = restTemplate.exchange(url,HttpMethod.PUT, requestFileUpload, Response.class);//postForEntity(url, temp1, Response.class);
 	
 		
 		//ResponseEntity<Response> tmpResponse = restTemplate.postForEntity(String.format("%s/api/fileUpload/fileName=%s", platformServer,
@@ -167,5 +199,5 @@ public class UserUploadProcessor implements Processor {
 		
 		return tmpResponse;
 	}
-
+	
 }

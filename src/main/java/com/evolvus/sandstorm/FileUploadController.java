@@ -2,13 +2,12 @@ package com.evolvus.sandstorm;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.ArrayList;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -22,6 +21,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -83,7 +83,7 @@ public class FileUploadController {
 			//uploadedFile = new File(lookupMap.get(filePath).toString());
 			//file.transferTo(uploadedFile);
 			//this.validateFileSize(uploadedFile, lookupMap);
-                        uploadedFile = saveUploadedFileToPath(file, lookupMap.get(filePath).toString());
+                        uploadedFile = saveUploadedFileToPath(file, lookupMap.get(filePath).toString(), request);
 			response.setDescription("File uploaded successfully.");
 
 		} catch (InvalidFileException e) {
@@ -122,8 +122,8 @@ public class FileUploadController {
 	 */
 	private void insertFileRecord(final MultipartFile file, final String value, final HttpServletRequest request,
 			Response response) {
+		
 		FileUpload fileUpload = new FileUpload();
-		fileUpload.setFileName(file.getOriginalFilename());
 		fileUpload.setEnablFlag(Constants.TRUE);
 		fileUpload.setFileIdentification(value);
 		fileUpload.setFileUploadStatus(Constants.INITIALIZED);
@@ -133,14 +133,31 @@ public class FileUploadController {
 		fileUpload.setCreatedBy(request.getHeader(Constants.USER));
 		fileUpload.setFileType(value);
 		fileUpload.setTotalTransaction("");
+		fileUpload.setTotalFailedCount("");
+		fileUpload.setTotalProcessedCount("");
+		
 		fileUpload.setCount("");
 		fileUpload.setUploadedBy(request.getHeader(Constants.USER));
 		fileUpload.setErrorLog("");
 		fileUpload.setSuccessLog("");
+		HttpHeaders headers = setHeaders(request);
+		HttpEntity<FileUpload> httpEntity =new HttpEntity<FileUpload>(fileUpload,headers);
+		String tenantId = null;
+		String fileName = file.getOriginalFilename();
+		if(httpEntity.getHeaders().get("X-TENANT-ID") != null && httpEntity.getHeaders().get("X-TENANT-ID").get(0) != null) {
+			tenantId = httpEntity.getHeaders().get("X-TENANT-ID").get(0).toString();
+
+		}
+		
+		 String preffixFileName = fileName.substring(0, fileName.lastIndexOf("."));
+		 preffixFileName = preffixFileName.concat("_"+tenantId);
+		 String suffixFileName = fileName.substring( fileName.lastIndexOf("."));
+		 fileName = preffixFileName.concat(suffixFileName);
+		 fileUpload.setFileName(fileName);
 		LOGGER.info("FileUpload before saving/posting object is :{}", fileUpload);
 		try {
 			Response fileUploadResponse = restTemplate
-					.postForObject(String.format("%s/api/fileUpload/", platformServer), fileUpload, Response.class);
+					.postForObject(String.format("%s/api/fileUpload/", platformServer), httpEntity, Response.class);
 			LOGGER.debug("FileUpload saved response status :{}", fileUploadResponse);
 		} catch (Exception rce) {
 			if (LOGGER.isErrorEnabled()) {
@@ -261,10 +278,24 @@ public class FileUploadController {
 	 * @return sourceFile
 	 */
 
-	private File saveUploadedFileToPath(MultipartFile multipartfile, String targetFolderPath) {
+	private File saveUploadedFileToPath(MultipartFile multipartfile, String targetFolderPath,final HttpServletRequest request ) {
 		File sourceFile = null;
 		try {
+			HttpHeaders headers = setHeaders(request);
+
+			HttpEntity<?> requestEntity = new HttpEntity<>(headers);
+			String tenantId = null;
 			String fileName = multipartfile.getOriginalFilename();
+			if(requestEntity.getHeaders().get("X-TENANT-ID") != null && requestEntity.getHeaders().get("X-TENANT-ID").get(0) != null) {
+				tenantId = requestEntity.getHeaders().get("X-TENANT-ID").get(0).toString();
+
+			}
+			
+			 String preffixFileName = fileName.substring(0, fileName.lastIndexOf("."));
+			 preffixFileName = preffixFileName.concat("_"+tenantId);
+			 String suffixFileName = fileName.substring( fileName.lastIndexOf("."));
+			 fileName = preffixFileName.concat(suffixFileName);
+			
 			LOGGER.debug("FileName uploaded {}", fileName);
 
 			File sourceDirectory = new File(targetFolderPath);
