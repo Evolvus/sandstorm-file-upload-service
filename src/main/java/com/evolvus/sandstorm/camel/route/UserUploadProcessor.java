@@ -47,7 +47,7 @@ public class UserUploadProcessor implements Processor {
 	private static final String TOTAL_PROCESSED_COUNT = "totalProcessedCount";
 
 	private static final String TOTAL_FAILED_COUNT = "totalFailedCount";
-
+	
 	private static final String TOTAL_TRANSACTION = "totalTransaction";
 
 	private static final String PROCESSING_STATUS = "processingStatus";
@@ -80,10 +80,10 @@ public class UserUploadProcessor implements Processor {
 		 fileName=(String) exchange.getIn().getHeader(CAMEL_FILE_NAME);
 		}
 		
-String tenantId = fileName.substring( fileName.lastIndexOf("_")+1 , fileName.lastIndexOf("."));
-
-httpHeader.set("X-TENANT-ID", tenantId);
-final HttpEntity<String> entity = new HttpEntity<String>(httpHeader);
+       String tenantId = fileName.substring( fileName.lastIndexOf("_")+1 , fileName.lastIndexOf("."));
+	
+       httpHeader.set("X-TENANT-ID", tenantId);
+        final HttpEntity<String> entity = new HttpEntity<String>(httpHeader);
 
 		List<String> createdUserList = new ArrayList();
 
@@ -110,11 +110,14 @@ final HttpEntity<String> entity = new HttpEntity<String>(httpHeader);
 				List<Object> failedUsers= new ArrayList();
 				Integer totalTransaction = userBeanList.size();
 				Integer totalProcessCount = 0;
+				Integer totalProcessedCount =0;
 				Integer totalFailedCount = 0;
 	
 				for (UserBean userBean : userBeanList) {
 
 					try {
+						//entity id hardcoded for ban kcda
+						userBean.setEntityId("H001B001");
 						HttpEntity<UserBean> requestBody = new HttpEntity<UserBean>((UserBean) userBean, httpHeader);
 						ResponseEntity<Response> responseUser = restTemplate.postForEntity(
 								String.format("%s/api/user/bulk", platformServer), requestBody, Response.class);
@@ -131,6 +134,8 @@ final HttpEntity<String> entity = new HttpEntity<String>(httpHeader);
 								errorLog=errorLog+" line: "+totalProcessCount.toString();
 								errorLog=errorLog+" message: "+resp.getDescription();
 								failedUsers.add(errorLog);
+							}else {
+								totalProcessedCount++;
 							}
 								totalProcessCount++;
 							
@@ -143,7 +148,7 @@ final HttpEntity<String> entity = new HttpEntity<String>(httpHeader);
 						createdUserList.add(
 								String.format("User %s is not valid %s", userBean.getUserId(), excep.getMessage()));
 					} finally {
-						fileUploadMap.put(TOTAL_PROCESSED_COUNT, totalProcessCount);
+						fileUploadMap.put(TOTAL_PROCESSED_COUNT, totalProcessedCount);
 						fileUploadMap.put(TOTAL_FAILED_COUNT, totalFailedCount);
 						fileUploadMap.put(TOTAL_TRANSACTION, totalTransaction);
 						fileUploadMap.put(PROCESSING_STATUS, FileStatus.IN_PROGRESS);

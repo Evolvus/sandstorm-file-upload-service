@@ -1,0 +1,27 @@
+<beanio xmlns="http://www.beanio.org/2012/03">
+
+	<!-- 'strict' enforces record order and record sizes -->
+	<stream name="users" format="csv" ignoreUnidentifiedRecords="true" resourceBundle="validationMessages">
+		<parser>
+			<property name="delimiter" value="," />
+		</parser>
+		<record name="user"
+			class="com.evolvus.sandstorm.csv.bean.UserBean" minOccurs="0" maxOccurs="unbounded" >
+			<field name="userId" required="true" />
+			<field name="userName" required="true" />
+			<field name="designation" required="true" />
+			<field name="role" required="true" />
+			<field name="phoneNumber" required="true" />
+			<field name="mobileNumber" required="true" />
+			<field name="emailId" required="true" />
+			<field name="fax" required="true"/>
+			<field name="country" required="true"/>
+			<field name="state" required="true" />
+			<field name="city" required="true" />
+			<field name="masterTimeZone" required="true" />
+			<field name="individualTransactionLimit" required="true" />
+			<field name="dailyLimit" required="true" />
+			<field name="masterCurrency" required="true" />
+		</record>
+	</stream>
+</beanio>

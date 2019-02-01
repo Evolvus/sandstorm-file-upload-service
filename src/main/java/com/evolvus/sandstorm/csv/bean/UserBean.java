@@ -1,5 +1,7 @@
 package com.evolvus.sandstorm.csv.bean;
 
+
+
 import org.apache.camel.dataformat.bindy.annotation.CsvRecord;
 import org.apache.camel.dataformat.bindy.annotation.DataField;
 
@@ -44,17 +46,16 @@ public class UserBean {
 
 	@DataField(pos = 12)
 	private String masterTimeZone;
-
-	@DataField(pos = 13)
+	
 	private String entityId;
 
-	@DataField(pos = 14)
+	@DataField(pos = 13)
 	private Integer individualTransactionLimit;
 
-	@DataField(pos = 15)
+	@DataField(pos = 14)
 	private Integer dailyLimit;
 
-	@DataField(pos = 16)
+	@DataField(pos = 15)
 	private String masterCurrency;
 
 	@Override
