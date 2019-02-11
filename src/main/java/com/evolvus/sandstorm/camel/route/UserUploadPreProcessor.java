@@ -77,6 +77,10 @@ public class UserUploadPreProcessor implements Processor {
 		if (in.read() == null && count == 0) {
 			fileStatus = "ERROR";
 			errorMsgList.add("uploaded file is empty");
+		}else {
+			while(in.read()!=null) {
+				
+			}
 		}
 		exchange.getIn().setHeader("fileStatus", fileStatus);
 		if (errorMsgList.size() > 0) {
@@ -89,11 +93,13 @@ public class UserUploadPreProcessor implements Processor {
 	public void beanIoErrorHandler(BeanReader beanReader) {
 		try {
 			beanReader.setErrorHandler(new BeanReaderErrorHandlerSupport() {
-
 				public void invalidRecord(InvalidRecordException ex) throws Exception {
 					count++;
 					for (int i = 0, j = ex.getRecordCount(); i < j; i++) {
-						RecordContext context = ex.getRecordContext(i);
+						RecordContext context = ex.getRecordContext(i);					
+							if(context.getRecordText().split(",").length !=15) {
+								logError("line number " +context.getRecordLineNumber() + " has incorrect fields, it should have 15 fields");
+							}
 						if (context.hasRecordErrors()) {
 							for (String error : context.getRecordErrors()) {
 								logError(error);

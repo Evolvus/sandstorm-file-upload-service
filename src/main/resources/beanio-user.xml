@@ -6,8 +6,8 @@
 			<property name="delimiter" value="," />
 		</parser>
 		<record name="user"
-			class="com.evolvus.sandstorm.csv.bean.UserBean" minOccurs="0" maxOccurs="unbounded" >
-			<field name="userId" required="true" />
+			class="com.evolvus.sandstorm.csv.bean.UserBean" minOccurs="0" maxOccurs="unbounded"  >
+			<field name="userId" required="true"  />
 			<field name="userName" required="true" />
 			<field name="designation" required="true" />
 			<field name="role" required="true" />
