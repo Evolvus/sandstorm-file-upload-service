@@ -9,16 +9,16 @@
 			class="com.evolvus.sandstorm.csv.bean.UserBean" minOccurs="0" maxOccurs="unbounded"  >
 			<field name="userId" required="true"  />
 			<field name="userName" required="true" />
-			<field name="designation" required="true" />
+			<field name="designation"  />
 			<field name="role" required="true" />
-			<field name="phoneNumber" required="true" />
-			<field name="mobileNumber" required="true" />
+			<field name="phoneNumber"  />
+			<field name="mobileNumber" />
 			<field name="emailId" required="true" />
-			<field name="fax" required="true"/>
+			<field name="fax" />
 			<field name="country" required="true"/>
 			<field name="state" required="true" />
 			<field name="city" required="true" />
-			<field name="masterTimeZone" required="true" />
+			<field name="masterTimeZone" />
 			<field name="individualTransactionLimit" required="true" />
 			<field name="dailyLimit" required="true" />
 			<field name="masterCurrency" required="true" />
