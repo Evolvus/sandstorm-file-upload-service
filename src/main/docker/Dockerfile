@@ -1,4 +1,4 @@
-FROM frolvlad/alpine-oraclejdk8:slim
+FROM halcom/oracle-jdk8:151
 VOLUME /tmp
 ADD sandstorm-file-upload-service-*.jar sandstorm-file-upload-service.jar
 RUN sh -c 'touch /sandstorm-file-upload-service.jar'

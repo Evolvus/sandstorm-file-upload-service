@@ -19,8 +19,8 @@
 			<field name="state" required="true" />
 			<field name="city" required="true" />
 			<field name="masterTimeZone" />
-			<field name="individualTransactionLimit" required="true" />
-			<field name="dailyLimit" required="true" />
+			<field name="individualTransactionLimit" required="true" type="integer"/>
+			<field name="dailyLimit" required="true" type="integer"/>
 			<field name="masterCurrency" required="true" />
 		</record>
 	</stream>

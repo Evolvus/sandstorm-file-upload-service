@@ -70,7 +70,7 @@ public class UserUploadPreProcessor implements Processor {
 		StreamFactory factory = StreamFactory.newInstance();
 		Resource resource = new ClassPathResource("beanio-user.xml");
 		factory.load(resource.getInputStream());
-		errorMsgList = new ArrayList<>();
+ 		errorMsgList = new ArrayList<>();
 		fileStatus = "SUCCESS";
 		BeanReader in = factory.createReader("users", exchange.getIn().getBody(File.class));
 		beanIoErrorHandler(in);
