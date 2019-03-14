@@ -50,10 +50,10 @@ public class UserBean {
 	private String entityId;
 
 	@DataField(pos = 13)
-	private Integer individualTransactionLimit;
+	private Float individualTransactionLimit;
 
 	@DataField(pos = 14)
-	private Integer dailyLimit;
+	private Float dailyLimit;
 
 	@DataField(pos = 15)
 	private String masterCurrency;

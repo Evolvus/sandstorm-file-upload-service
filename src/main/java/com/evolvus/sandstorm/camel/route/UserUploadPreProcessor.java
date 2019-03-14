@@ -86,6 +86,8 @@ public class UserUploadPreProcessor implements Processor {
 		if (errorMsgList.size() > 0) {
 			errorMsgList.add("Uploaded File has incorrect records, Please update the file again with correct records");
 			getFileUpload(exchange);
+		} else {
+			getFileUpload(exchange);
 		}
 		in.close();
 	}

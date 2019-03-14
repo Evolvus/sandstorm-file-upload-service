@@ -116,30 +116,92 @@ public class UserUploadProcessor implements Processor {
 				for (UserBean userBean : userBeanList) {
 
 					try {
-						//entity id hardcoded for ban kcda
-						userBean.setEntityId("H001B001");
-						HttpEntity<UserBean> requestBody = new HttpEntity<UserBean>((UserBean) userBean, httpHeader);
-						ResponseEntity<Response> responseUser = restTemplate.postForEntity(
-								String.format("%s/api/user/bulk", platformServer), requestBody, Response.class);
-						if (responseUser.hasBody()) {
-							Response resp = responseUser.getBody();
-							HashMap user = (LinkedHashMap) resp.getData();
-							createdUserList.add(MessageFormat.format("{0},{1}", userBean.toString(),
-									String.format("User Id [%s],tenant :[%s] created _id:%s", user.get("userId"),
-											user.get("tenantId"), user.get("_id"))));
-							if(resp.getStatus().equals("400")) {
-								String errorLog="";
-								totalFailedCount++;
+						 final HttpEntity<String> header = new HttpEntity<String>(httpHeader);
+						 final String urlForUser = platformServer+"/api/user?userId="+userBean.getUserId().toUpperCase();
+			             ResponseEntity<Response> responseGetUser = restTemplate.exchange(urlForUser, HttpMethod.GET, header, Response.class);
+			             final String urlForRole = platformServer+"/api/role?roleName="+userBean.getRole().toUpperCase();
+			             ResponseEntity<Response> responseGetRole = restTemplate.exchange(urlForRole, HttpMethod.GET, header, Response.class);
+						 final String urlForMasterCurrency = platformServer+"/api/masterCurrency?currencyName="+userBean.getMasterCurrency();
+			             ResponseEntity<Response> responseMasterCurrency = restTemplate.exchange(urlForMasterCurrency, HttpMethod.GET, header, Response.class);
+			             if(responseGetUser.hasBody() && responseGetRole.hasBody() ) {
+			            	 System.out.println(responseGetUser.getBody().getData().toString());
+			            	 if(responseGetUser.getBody().getData().toString() == "[]" && responseGetRole.getBody().getData().toString() != "[]" && responseMasterCurrency.getBody().getData().toString() != "[]") {
+			            		  //entity id hardcoded for ban kcda
+			         			userBean.setEntityId("H001B001");
+								HttpEntity<UserBean> requestBody = new HttpEntity<UserBean>((UserBean) userBean, httpHeader);
+								ResponseEntity<Response> responseUser = restTemplate.postForEntity(
+										String.format("%s/api/user/bulk", platformServer), requestBody, Response.class);
+								if (responseUser.hasBody()) {
+									Response resp = responseUser.getBody();
+									HashMap user = (LinkedHashMap) resp.getData();
+									createdUserList.add(MessageFormat.format("{0},{1}", userBean.toString(),
+											String.format("User Id [%s],tenant :[%s] created _id:%s", user.get("userId"),
+													user.get("tenantId"), user.get("_id"))));
+									if(resp.getStatus().equals("400")) {
+										String errorLog="";
+										totalFailedCount++;
 
-								errorLog=errorLog+" line: "+totalProcessCount.toString();
-								errorLog=errorLog+" message: "+resp.getDescription();
-								failedUsers.add(errorLog);
-							}else {
-								totalProcessedCount++;
-							}
-								totalProcessCount++;
-							
-						}
+										errorLog=errorLog+" line: "+totalProcessCount.toString();
+										errorLog=errorLog+" message: "+resp.getDescription();
+										failedUsers.add(errorLog);
+									}else {
+										totalProcessedCount++;
+									}
+										totalProcessCount++;
+									
+								}
+			            	 } else {
+			            		 String errorLog="";
+			            		 totalFailedCount++;
+			            		 totalProcessCount++;
+			            		 if(responseGetUser.getBody().getData().toString() != "[]" && responseGetRole.getBody().getData().toString() == "[]" && responseMasterCurrency.getBody().getData().toString() == "[]") {
+			            			 errorLog=errorLog+" line: "+totalProcessCount.toString();
+			            			 errorLog=errorLog+" message: Unable to add new User due to " + userBean.getUserName().toString()+ " user is already exist";
+			            			 errorLog=errorLog+" line: "+totalProcessCount.toString();
+			            			 errorLog=errorLog+" message:  User save failed due to the Role " +userBean.getRole().toString() + " which is assigned to user not found";
+			            			 errorLog=errorLog+" line: "+totalProcessCount.toString();
+			            			 errorLog=errorLog+" message:  User save failed due to the masterCurrency " +userBean.getMasterCurrency().toString() + " which is assigned to user is inValid";
+				            			failedUsers.add(errorLog);
+			            		 }else if(responseGetUser.getBody().getData().toString() == "[]" && responseGetRole.getBody().getData().toString() == "[]"  && responseMasterCurrency.getBody().getData().toString() == "[]") {
+			            			 errorLog=errorLog+" line: "+totalProcessCount.toString();
+			            			 errorLog=errorLog+" message:  User save failed due to the Role "+ userBean.getRole().toString() + " which is assigned to user not found";
+			            			 errorLog=errorLog+" line: "+totalProcessCount.toString();
+			            			 errorLog=errorLog+" message:  User save failed due to the masterCurrency " +userBean.getMasterCurrency().toString() + " which is assigned to user is inValid";
+			            				failedUsers.add(errorLog);
+			            		 } else if (responseGetUser.getBody().getData().toString() != "[]" && responseGetRole.getBody().getData().toString() == "[]" && responseMasterCurrency.getBody().getData().toString() != "[]") {
+			            			 errorLog=errorLog+" line: "+totalProcessCount.toString();
+			            			 errorLog=errorLog+" message: Unable to add new User due to " + userBean.getUserName().toString() + " user is already exist";
+			            			 errorLog=errorLog+" line: "+totalProcessCount.toString();
+			            			 errorLog=errorLog+" message:  User save failed due to the Role "+ userBean.getRole().toString() + " which is assigned to user not found";
+			            				failedUsers.add(errorLog);
+			            	 }else if(responseGetUser.getBody().getData().toString() != "[]" && responseGetRole.getBody().getData().toString() != "[]" && responseMasterCurrency.getBody().getData().toString() == "[]"){
+			            		 errorLog=errorLog+" line: "+totalProcessCount.toString();
+		            			 errorLog=errorLog+" message: Unable to add new User due to " + userBean.getUserName().toString() + " user is already exist";
+		            			 errorLog=errorLog+" line: "+totalProcessCount.toString();
+		            			 errorLog=errorLog+" message:  User save failed due to the masterCurrency " +userBean.getMasterCurrency().toString() + " which is assigned to user is inValid";
+		            				failedUsers.add(errorLog);
+			            	 }else if(responseGetUser.getBody().getData().toString() == "[]" && responseGetRole.getBody().getData().toString() == "[]" && responseMasterCurrency.getBody().getData().toString() == "[]"){
+			            		 errorLog=errorLog+" line: "+totalProcessCount.toString();
+		            			 errorLog=errorLog+" message:  User save failed due to the Role "+ userBean.getRole().toString() + " which is assigned to user not found";
+		            			 errorLog=errorLog+" line: "+totalProcessCount.toString();
+		            			 errorLog=errorLog+" message:  User save failed due to the masterCurrency " +userBean.getMasterCurrency().toString() + " which is assigned to user is inValid";
+		            				failedUsers.add(errorLog);
+			            	 }else if(responseGetUser.getBody().getData().toString() == "[]" && responseGetRole.getBody().getData().toString() != "[]" && responseMasterCurrency.getBody().getData().toString() == "[]"){
+			            		 
+		            			 errorLog=errorLog+" line: "+totalProcessCount.toString();
+		            			 errorLog=errorLog+" message:  User save failed due to the masterCurrency " +userBean.getMasterCurrency().toString() + " which is assigned to user is inValid";
+		            				failedUsers.add(errorLog);
+			            	 }else if(responseGetUser.getBody().getData().toString() == "[]" && responseGetRole.getBody().getData().toString() == "[]" && responseMasterCurrency.getBody().getData().toString() != "[]"){
+			            		 
+			            		 errorLog=errorLog+" line: "+totalProcessCount.toString();
+		            			 errorLog=errorLog+" message:  User save failed due to the Role "+ userBean.getRole().toString() + " which is assigned to user not found";
+		            				failedUsers.add(errorLog);
+			            	 }
+//			            	 
+			             }
+			             }
+			           
+			
 					} catch (Exception excep) {
 						totalFailedCount++;
 						if (LOGGER.isErrorEnabled()) {

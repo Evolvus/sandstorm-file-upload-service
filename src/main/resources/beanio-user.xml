@@ -7,20 +7,23 @@
 		</parser>
 		<record name="user"
 			class="com.evolvus.sandstorm.csv.bean.UserBean" minOccurs="0" maxOccurs="unbounded"  >
-			<field name="userId" required="true"  />
-			<field name="userName" required="true" />
-			<field name="designation"  />
+			<field name="userId" required="true" minLength="6" maxLength="35" regex="^[a-zA-Z0-9]*$" trim="true" />
+			<field name="userName" required="true" minLength="6" maxLength="140"/>
+			<field name="designation"  maxLength="35" />
 			<field name="role" required="true" />
-			<field name="phoneNumber"  />
-			<field name="mobileNumber" />
-			<field name="emailId" required="true" />
-			<field name="fax" />
-			<field name="country" required="true"/>
-			<field name="state" required="true" />
-			<field name="city" required="true" />
+			<field name="phoneNumber" minLength="10" maxLength="10" trim="true"
+				regex="[0-9]+"/>
+			<field name="mobileNumber" minLength="10" maxLength="10" trim="true"
+				regex="[0-9]+"/>
+			<field name="emailId" required="true" maxLength="50" trim="true"
+				regex="^[_A-Za-z0-9-\+]+(\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\.[A-Za-z0-9]+)*(\.[A-Za-z]{2,})$" />
+			<field name="fax" maxLength="10" />
+			<field name="country" required="true" maxLength="20" regex="^[a-zA-Z\s]+$"/>
+			<field name="state" required="true" maxLength="20" regex="^[a-zA-Z\s]+$"/>
+			<field name="city" required="true" maxLength="20" regex="^[a-zA-Z\s]+$"/>
 			<field name="masterTimeZone" />
-			<field name="individualTransactionLimit" required="true" type="integer"/>
-			<field name="dailyLimit" required="true" type="integer"/>
+			<field name="individualTransactionLimit" required="true" type="float" maxLength="20" regex="^[0-9.]*$"/>
+			<field name="dailyLimit" required="true" type="float" maxLength="20" regex="^[0-9.]*$"/>
 			<field name="masterCurrency" required="true" />
 		</record>
 	</stream>
